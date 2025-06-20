@@ -1,5 +1,8 @@
-use boa_engine::Source;
+use handlebars::Handlebars;
+use handlebars_misc_helpers::register;
 use serde::{Deserialize, Serialize};
+use serde_json::json;
+use std::collections::BTreeMap;
 use std::fs;
 use std::io::Write;
 use std::path::PathBuf;
@@ -39,33 +42,29 @@ impl Default for Config {
             author: "GOD".into(),
             code: Code {
                 filename: r#"
-function filename(title, url) {
-  const urlMatch = url.match(/problemset\/problem\/(\d+)\/([A-Za-z0-9]+)/i);
-  if (!urlMatch) throw new Error("Invalid Codeforces problem URL");
-  const contestId = urlMatch[1];
-  const problemIndex = urlMatch[2].toLowerCase();
-
-  // Extract problem index and actual title from title string
-  const titleMatch = title.match(/^([A-Za-z0-9]+)\.\s*(.+)$/);
-  if (!titleMatch) throw new Error("Title format should be like 'A. Problem Title'");
-  const problemTitle = titleMatch[2];
-
-  // Format title: lowercase, words separated by hyphens
-  const formattedTitle = problemTitle
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-") // Replace non-alphanumeric with hyphen
-    .replace(/^-+|-+$/g, "")     // Trim leading/trailing hyphens
-    .replace(/-+/g, "-");        // Collapse multiple hyphens
-
-  return `./src/bin/${contestId}.${problemIndex}.${formattedTitle}.rs`;
-}
+{{#with (regex_captures
+  pattern="problemset/problem/(\\d+)/([A-Za-z0-9]+)"
+  on=url) as |url_parts|}}
+  {{#with (regex_captures
+    pattern="^[A-Za-z0-9]+\\.\\s*(.+)$"
+    on=../title) as |title_parts|}}
+./src/bin/{{url_parts._1}}-{{to_lower_case url_parts._2}}-{{to_kebab_case title_parts._1}}.rs
+  {{/with}}
+{{/with}}
 "#
                 .into(),
                 template: "".into(),
                 modifier: r#"
-function modify(code, lib_files) {
-    return `${code}`;
+{{!-- Triple braces to prevent html escaping --}}
+{{!-- Base code block --}}
+{{{code}}}
+
+{{!-- Iterate over each library in lib_files --}}
+{{#each lib_files}}
+mod {{@key}} {
+    {{{this}}}
 }
+{{/each}}
 "#
                 .into(),
             },
@@ -82,20 +81,17 @@ function modify(code, lib_files) {
 
 impl Config {
     pub fn get_filename(&self, problem: &Problem) -> Result<String, String> {
-        let mut context = boa_engine::Context::default();
-        context
-            .eval(Source::from_bytes(&self.code.filename))
+        let mut bars = Handlebars::new();
+        register(&mut bars);
+        bars.register_template_string("filename", &self.code.filename)
             .map_to_string()?;
-
-        Ok(context
-            .eval(Source::from_bytes(&format!(
-                "filename(\"{}\", \"{}\")",
-                problem.title, problem.url
-            )))
-            .map_to_string_mess("error while evaluating filename")?
-            .as_string()
-            .unwrap()
-            .to_std_string_escaped())
+        let mut data = BTreeMap::new();
+        data.insert("title", problem.title.clone());
+        data.insert("url", problem.url.clone());
+        let name = bars.render("filename", &data).map_to_string()?;
+        let name = name.trim().to_string();
+        println!("name = {name}");
+        Ok(name)
     }
 
     pub fn get_file_path(&self, problem: &Problem, dir: &Path) -> Result<PathBuf, String> {
@@ -134,34 +130,19 @@ impl Config {
 
         // Get included files content
         let included_files = self.get_included_files(dir)?;
-        // Create JS context
-        let mut context = boa_engine::Context::default();
-        context
-            .eval(Source::from_bytes(self.code.modifier.as_bytes()))
+
+        let mut bars = Handlebars::new();
+        register(&mut bars);
+        bars.register_template_string("modify", &self.code.modifier)
             .map_to_string()?;
 
-        // Prepare JS object for included files
-        let includes_js = included_files
-            .iter()
-            .map(|(k, v)| format!("\"{}\": `{}`", k, v.replace('`', "\\`")))
-            .collect::<Vec<String>>()
-            .join(", ");
+        // Prepare context for the template
+        let data = json!({
+            "code": source_code,
+            "lib_files": included_files
+        });
 
-        // Prepare JS call to modifier function
-        let js_call = format!(
-            "modify(`{}`, {{ {} }})",
-            source_code.replace('`', "\\`"),
-            includes_js
-        );
-
-        // Evaluate the modifier call
-        match context.eval(Source::from_bytes(js_call.as_bytes())) {
-            Ok(result) => match result.as_string() {
-                Some(s) => Ok(s.to_std_string_escaped()),
-                None => Err("invaild value produced by modifier script".into()),
-            },
-            Err(e) => Err(format!("{e}")),
-        }
+        Ok(bars.render("modify", &data).map_to_string()?)
     }
 }
 

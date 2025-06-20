@@ -24,10 +24,10 @@ actix-web = "4.11.0"
 tauri-plugin-http = { version = "2.4.4", features = ["json"] }
 toml = { version = "0.8.23", features = ["preserve_order"] }
 wait-timeout = "0.2.1"
-open = "5.3.2"
-boa_engine = "0.20.0"
 chrono = "0.4.41"
 notify = { version = "8.0.0", features = ["serde"] }
+handlebars = { version = "6.3.2", features = ["string_helpers", "script_helper", "heck", "rust-embed"] }
+handlebars_misc_helpers = "0.17.0"
 
 [dependencies.uuid]
 version = "1.17.0"
