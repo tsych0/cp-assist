@@ -1,8 +1,9 @@
 use handlebars::Handlebars;
 use handlebars_misc_helpers::register;
+use regex::Regex;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, VecDeque};
 use std::fs;
 use std::io::Write;
 use std::path::PathBuf;
@@ -34,6 +35,7 @@ pub struct Code {
     pub filename: String,
     pub template: String,
     pub modifier: String,
+    pub lib_check_regex: String,
 }
 
 impl Default for Config {
@@ -67,6 +69,7 @@ mod {{@key}} {
 {{/each}}
 "#
                 .into(),
+                lib_check_regex: "use.*{{name}}(::|;)".into(),
             },
             include: HashMap::new(),
             editor: "code".into(),
@@ -104,12 +107,28 @@ impl Config {
             .into_iter()
             .map(|(key, value)| {
                 let path = resolve_path(dir, &value);
-                match fs::read_to_string(&path) {
-                    Ok(content) => Ok((key, content)),
-                    Err(e) => Err(format!("Failed to read file {:?}: {}", path, e)),
+                let mut files: HashMap<String, PathBuf> = HashMap::new();
+                if path.is_dir() {
+                    for f in path.read_dir().map_to_string()? {
+                        if let Ok(file) = f {
+                            if let Some(file_name) = file.path().file_stem() {
+                                files.insert(file_name.to_string_lossy().to_string(), file.path());
+                            }
+                        }
+                    }
+                } else {
+                    files.insert(key, path);
                 }
+                files
+                    .into_iter()
+                    .map(|(k, v)| match fs::read_to_string(&v) {
+                        Ok(content) => Ok((k, content)),
+                        Err(e) => Err(format!("Failed to read file {:?}: {}", v, e)),
+                    })
+                    .collect::<Result<Vec<_>, String>>()
             })
-            .collect()
+            .collect::<Result<Vec<_>, String>>()
+            .map(|v| v.concat().into_iter().collect())
     }
 
     pub fn get_template(&self, dir: &Path) -> String {
@@ -129,17 +148,58 @@ impl Config {
         let source_code = extract_code_block(&source_code);
 
         // Get included files content
-        let included_files = self.get_included_files(dir)?;
+        let mut included_files = self.get_included_files(dir)?;
+        // let re = regex
+
+        let mut deque = VecDeque::new();
+        let mut visited = HashMap::new();
 
         let mut bars = Handlebars::new();
         register(&mut bars);
+        bars.register_template_string("libcheck", &self.code.lib_check_regex)
+            .map_to_string()?;
+
+        // First see what files are required in the source code
+        for (k, _) in &included_files {
+            let re = Regex::new(
+                &bars
+                    .render("libcheck", &json!({"name": k}))
+                    .map_to_string()?,
+            )
+            .map_to_string_mess("Invalid regex for lib_check")?;
+            println!("regex: {}", re.as_str());
+            if re.is_match(&source_code) {
+                deque.push_back(k.clone());
+            }
+        }
+
+        // Then dfs to see what are the dependencies
+        while let Some(d) = deque.pop_front() {
+            if visited.contains_key(&d) {
+                continue;
+            }
+            let v = included_files.remove(&d).unwrap();
+            visited.insert(d.clone(), v.clone());
+            for (k, _) in &included_files {
+                let re = Regex::new(
+                    &bars
+                        .render("libcheck", &json!({"name": k}))
+                        .map_to_string()?,
+                )
+                .map_to_string_mess("Invalid regex for lib_check")?;
+                if re.is_match(&v) {
+                    deque.push_back(k.clone());
+                }
+            }
+        }
+
         bars.register_template_string("modify", &self.code.modifier)
             .map_to_string()?;
 
         // Prepare context for the template
         let data = json!({
             "code": source_code,
-            "lib_files": included_files
+            "lib_files": visited
         });
 
         Ok(bars.render("modify", &data).map_to_string()?)

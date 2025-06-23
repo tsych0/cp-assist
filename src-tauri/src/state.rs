@@ -135,7 +135,7 @@ pub async fn create_file(app_state: State<'_, Mutex<AppState>>) -> Result<(), St
     let file_path = state
         .config
         .get_file_path(&state.problem, &state.directory)?;
-    create_dir_all(&file_path.parent().unwrap()).map_to_string()?;
+    create_dir_all(&file_path.parent().ok_or("invalid file path".to_string())?).map_to_string()?;
 
     if !file_path.exists() {
         let mut f = File::create_new(&file_path).map_to_string()?;
