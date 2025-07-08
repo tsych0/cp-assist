@@ -121,6 +121,7 @@ impl Config {
                 }
                 files
                     .into_iter()
+                    .filter(|(_, v)| v.is_file())
                     .map(|(k, v)| match fs::read_to_string(&v) {
                         Ok(content) => Ok((k, content)),
                         Err(e) => Err(format!("Failed to read file {:?}: {}", v, e)),

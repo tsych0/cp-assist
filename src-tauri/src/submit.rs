@@ -17,6 +17,7 @@ pub struct Solution {
     problem_name: String,
     url: String,
     source_code: String,
+    file_name: String,
     language_id: usize,
 }
 
@@ -79,6 +80,7 @@ pub async fn submit_solution(app_state: tauri::State<'_, Mutex<AppState>>) -> Re
         language_id: state.get_language().map_to_string()?.cf_id,
         problem_name,
         source_code,
+        file_name: state.get_language().map_to_string()?.source_file,
         url: state.problem.url,
     };
 
