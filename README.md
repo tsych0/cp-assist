@@ -48,22 +48,22 @@ https://github.com/user-attachments/assets/516eacd3-817e-4e87-bcbf-0817f914553f
 - [CP-Submit](https://github.com/tsycho/cp-submit) for submission integration
 
 ### Linux
-- **AppImage**: [Download](https://github.com/tsych0/cp-assist/releases/download/v0.3.0/cp-assist_0.3.0_amd64.deb)
+- **AppImage**: [Download](https://github.com/tsych0/cp-assist/releases/download/v0.4.0/cp-assist_0.4.0_amd64.deb)
   ```bash
   # Making AppImage executable
-  chmod +x cp-assist_0.3.0_amd64.AppImage
-  ./cp-assist_0.3.0_amd64.AppImage
+  chmod +x cp-assist_0.4.0_amd64.AppImage
+  ./cp-assist_0.4.0_amd64.AppImage
   ```
-- **Arch Linux**: [.tar file](https://github.com/tsych0/cp-assist/archive/refs/tags/v0.3.0.tar.gz)
-- **Debian/Ubuntu**: [.deb file](https://github.com/tsych0/cp-assist/releases/download/v0.3.0/cp-assist_0.3.0_amd64.deb)
-- **Red Hat/Fedora**: [.rpm file](https://github.com/tsych0/cp-assist/releases/download/v0.3.0/cp-assist-0.3.0-1.x86_64.rpm)
+- **Arch Linux**: [.tar file](https://github.com/tsych0/cp-assist/archive/refs/tags/v0.4.0.tar.gz)
+- **Debian/Ubuntu**: [.deb file](https://github.com/tsych0/cp-assist/releases/download/v0.4.0/cp-assist_0.4.0_amd64.deb)
+- **Red Hat/Fedora**: [.rpm file](https://github.com/tsych0/cp-assist/releases/download/v0.4.0/cp-assist-0.4.0-1.x86_64.rpm)
 
 ### Windows
-- **Setup EXE**: [Download](https://github.com/tsych0/cp-assist/releases/download/v0.3.0/cp-assist_0.3.0_x64-setup.exe)
+- **Setup EXE**: [Download](https://github.com/tsych0/cp-assist/releases/download/v0.4.0/cp-assist_0.4.0_x64-setup.exe)
 
 ### Mac
-- **DMG File**: [Download](https://github.com/tsych0/cp-assist/releases/download/v0.3.0/cp-assist_0.3.0_aarch64.dmg)
-- **App zip**: [Download](https://github.com/tsych0/cp-assist/releases/download/v0.3.0/cp-assist.app.zip)
+- **DMG File**: [Download](https://github.com/tsych0/cp-assist/releases/download/v0.4.0/cp-assist_0.4.0_aarch64.dmg)
+- **App zip**: [Download](https://github.com/tsych0/cp-assist/releases/download/v0.4.0/cp-assist.app.zip)
 
 ## Usage
 

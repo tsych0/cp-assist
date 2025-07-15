@@ -1,6 +1,6 @@
 [package]
 name = "cp-assist"
-version = "0.3.1"
+version = "0.4.0"
 description = "A Competitive Programming assistant"
 authors = ["Ayush Biswas"]
 edition = "2021"
