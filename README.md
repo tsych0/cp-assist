@@ -22,7 +22,11 @@ CP-Assist is a powerful desktop application designed to supercharge your competi
 ![Example of a compilation error within the app](https://github.com/tsych0/cp-assist/blob/main/compilation_error.png?raw=true)
 
 **Demo Video**
-https://github.com/user-attachments/assets/516eacd3-817e-4e87-bcbf-0817f914553f
+
+
+https://github.com/user-attachments/assets/032702bf-5021-4046-a83d-9e7cec3047b4
+
+
 
 ## Features
 
