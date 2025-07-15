@@ -1,6 +1,6 @@
 import { Center, Flex, Group, Image, Select, Text } from "@mantine/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import {
   create_file,
@@ -20,21 +20,23 @@ const TitleBar = ({
   directory,
   setDirectory,
   loading,
-  setLoading
+  setLoading,
 }: {
   directory: string;
   setDirectory: (arg0: string) => void;
-  loading: boolean,
-  setLoading: (arg: boolean) => void
+  loading: boolean;
+  setLoading: (arg: boolean) => void;
 }) => {
   const [isFocused, setIsFocused] = useState(true);
   const [language, setLanguage] = useState("0");
   const [languages, setLanguages] = useState<
     { value: string; label: string }[]
   >([]);
-  const trimmedLanguages = languages.map((v) => {
-    return { label: v.label.split("(")[0], value: v.value };
-  });
+  const trimmedLanguages = useMemo(() => {
+    return languages.map((v) => {
+      return { label: v.label.split("(")[0], value: v.value };
+    });
+  }, [languages]);
 
   const languageFromId = (id: string) =>
     languages.filter((v) => v.value === id)[0].label;

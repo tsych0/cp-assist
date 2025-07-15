@@ -2,13 +2,15 @@ use crate::{state::AppState, utils::*, Language, WINDOW};
 use serde::{Deserialize, Serialize};
 use std::{
     fs::{self, create_dir_all, remove_dir_all},
-    io::Write,
+    io::{Read, Write},
     path::Path,
     process::{Command, Stdio},
     sync::Mutex,
+    time::{Duration, Instant},
 };
 use tauri::{Emitter, State};
 use uuid::Uuid;
+use wait_timeout::ChildExt;
 
 // Windows-specific imports
 #[cfg(windows)]
@@ -74,7 +76,8 @@ pub async fn test(
         }
         handle.emit("set-verdicts", &verdicts).map_to_string()?;
 
-        let verdicts = run_all(&language, &dir, verdicts)?;
+        let time_limit = state.problem.time_limit;
+        let verdicts = run_all(&language, &dir, verdicts, time_limit)?;
         if verdicts.iter().all(|v| v.status == "Accepted") && state.config.toggle.submit_on_ac {
             WINDOW
                 .get()
@@ -129,15 +132,21 @@ fn run_all(
     language: &Language,
     dir: &Path,
     verdicts: Vec<Verdict>,
+    time_limit: usize,
 ) -> Result<Vec<Verdict>, String> {
     let mut res = vec![];
     for v in verdicts {
-        res.push(run(language, dir, v)?);
+        res.push(run(language, dir, v, time_limit)?);
     }
     Ok(res)
 }
 
-fn run(language: &Language, dir: &Path, mut verdict: Verdict) -> Result<Verdict, String> {
+fn run(
+    language: &Language,
+    dir: &Path,
+    mut verdict: Verdict,
+    time_limit: usize,
+) -> Result<Verdict, String> {
     #[cfg(debug_assertions)]
     println!("dir: {}", dir.to_str().unwrap());
     let run_cmd = &language.run_cmd;
@@ -178,16 +187,27 @@ fn run(language: &Language, dir: &Path, mut verdict: Verdict) -> Result<Verdict,
         stdin.write_all(verdict.input.as_bytes()).map_to_string()?;
     }
 
-    let output = child.wait_with_output().map_to_string();
+    let start = Instant::now();
+    let status = child.wait_timeout(Duration::from_millis(time_limit as u64));
+    verdict.time = start.elapsed().as_secs_f32() * 1000.0;
 
-    match output {
-        Ok(sucess) => {
-            if !sucess.status.success() {
-                verdict.output = String::from_utf8_lossy(&sucess.stderr).into();
+    match status {
+        Ok(Some(exit_status)) => {
+            let mut stdout = String::new();
+            if let Some(mut s) = child.stdout.take() {
+                s.read_to_string(&mut stdout).map_to_string()?;
+            }
+            let mut stderr = String::new();
+            if let Some(mut s) = child.stderr.take() {
+                s.read_to_string(&mut stderr).map_to_string()?;
+            }
+
+            if !exit_status.success() {
+                verdict.output = stderr;
                 verdict.status_id = 11;
                 verdict.status = "Runtime Error (NZEC)".into();
             } else {
-                verdict.output = String::from_utf8_lossy(&sucess.stdout).to_string();
+                verdict.output = stdout;
                 if check(&verdict.answer, &verdict.output) {
                     verdict.status = "Accepted".into();
                     verdict.status_id = 3;
@@ -197,10 +217,16 @@ fn run(language: &Language, dir: &Path, mut verdict: Verdict) -> Result<Verdict,
                 }
             }
         }
-        Err(runtime_err) => {
-            verdict.output = runtime_err;
+        Ok(None) => {
+            child.kill().map_to_string()?;
+            child.wait().map_to_string()?; // Wait to reap child
+            verdict.status = "Time Limit Exceeded".into();
+            verdict.status_id = 5;
+        }
+        Err(e) => {
+            verdict.output = e.to_string();
             verdict.status_id = 7;
-            verdict.status = "Runtime Error (SIGABRT)".into();
+            verdict.status = "Runtime Error".into();
         }
     }
 

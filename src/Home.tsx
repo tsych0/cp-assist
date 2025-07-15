@@ -163,7 +163,7 @@ const Home = ({
           {verdicts[caseIndex]?.time && (
             <Group mx={10}>
               <Text ff={"monospace"} c={"#fcfcfc"} fz={20}>
-                {verdicts[caseIndex]?.time * 1000 + " ms"}
+                {verdicts[caseIndex]?.time + " ms"}
               </Text>
               <Text ff={"monospace"} c={"#fcfcfc"} fz={20}>
                 {Math.floor(verdicts[caseIndex]?.memory / 1024) + " Mb"}

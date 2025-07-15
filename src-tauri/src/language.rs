@@ -115,7 +115,7 @@ pub async fn get_languages(
 
     let mut languages = vec![];
     for (id, mut language) in languages_map {
-        language.id = id.parse().unwrap();
+        language.id = id.parse().unwrap_or(0);
         languages.push(language);
     }
 
