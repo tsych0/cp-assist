@@ -22,11 +22,13 @@ const MyTextarea = ({
   value,
   mx,
   onChange,
+  onClick,
 }: {
   title: string;
   value: string;
   mx: number | string | undefined;
   onChange: (v: string) => void;
+  onClick?: () => void;
 }) => {
   return (
     <Box
@@ -38,7 +40,9 @@ const MyTextarea = ({
                             rounded-md tracking-widest pt-1`}
       mx={mx}
     >
-      {title}
+      <div onClick={onClick} style={{ cursor: onClick ? "pointer" : "unset" }}>
+        {title}
+      </div>
       <Textarea
         className={`h-[91%] w-full px-2 top-10 bg-[#3e3e3e]/50 rounded-md absolute`}
         variant="unstyled"
@@ -61,8 +65,10 @@ const Home = ({
   let [caseIndex, setCaseIndex] = useState(0);
   const [input, setInput] = useState("");
   const [output, setOutput] = useState("");
+  const [stdError, setError] = useState("");
   const [answer, setAnswer] = useState("");
   const [editable, setEditable] = useState(false);
+  const [showError, setShowError] = useState(false);
   const otherVerdict =
     verdicts.filter((v) => v.status_id !== 3)[0] || verdicts[caseIndex];
   const cases = Array.from(Array(verdicts.length).keys())
@@ -88,6 +94,7 @@ const Home = ({
     setCaseIndex(index);
     setInput(verdicts[index]?.input ?? "");
     setOutput(verdicts[index]?.output ?? "");
+    setError(verdicts[index]?.stderr ?? "");
     setAnswer(verdicts[index]?.answer ?? "");
   };
 
@@ -102,6 +109,7 @@ const Home = ({
       input: input,
       answer: answer,
       output: "",
+      stderr: "",
       memory: 0,
       status: "NA",
       status_id: 0,
@@ -113,6 +121,7 @@ const Home = ({
   useEffect(() => {
     setInput(verdicts[caseIndex]?.input ?? "");
     setOutput(verdicts[caseIndex]?.output ?? "");
+    setError(verdicts[caseIndex]?.stderr ?? "");
     setAnswer(verdicts[caseIndex]?.answer ?? "");
     appWindow.setSize(new LogicalSize(1000, 650)).then(null);
   }, [verdicts]);
@@ -207,10 +216,11 @@ const Home = ({
             onChange={(v) => onEdit(setAnswer)(v)}
           />
           <MyTextarea
-            title={"Output"}
-            value={output}
-            mx={0}
+            title={showError ? "Error" : "Output"}
+            value={showError ? stdError : output}
             onChange={() => {}}
+            onClick={() => setShowError(!showError)}
+            mx={0}
           />
         </Group>
       </Stack>

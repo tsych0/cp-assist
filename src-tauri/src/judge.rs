@@ -23,6 +23,7 @@ const CREATE_NO_WINDOW: u32 = 0x08000000; // Prevents opening a new window
 pub struct Verdict {
     pub input: String,
     pub output: String,
+    pub stderr: String,
     pub answer: String,
     pub status_id: usize,
     pub status: String,
@@ -64,7 +65,7 @@ pub async fn test(
     // First try to compiler and if compilation error occurs then return
     if let Err(e) = compile(&language, &dir) {
         for v in &mut verdicts {
-            v.output = e.clone();
+            v.stderr = e.clone();
             v.status = "Compilation Error".into();
             v.status_id = 6;
         }
@@ -188,7 +189,7 @@ fn run(
     }
 
     let start = Instant::now();
-    let status = child.wait_timeout(Duration::from_millis(time_limit as u64));
+    let status = child.wait_timeout(Duration::from_millis(2 * time_limit as u64));
     verdict.time = start.elapsed().as_secs_f32() * 1000.0;
 
     match status {
@@ -202,12 +203,13 @@ fn run(
                 s.read_to_string(&mut stderr).map_to_string()?;
             }
 
+            verdict.output = stdout;
+            verdict.stderr = stderr;
+
             if !exit_status.success() {
-                verdict.output = stderr;
                 verdict.status_id = 11;
                 verdict.status = "Runtime Error (NZEC)".into();
             } else {
-                verdict.output = stdout;
                 if check(&verdict.answer, &verdict.output) {
                     verdict.status = "Accepted".into();
                     verdict.status_id = 3;
@@ -224,7 +226,7 @@ fn run(
             verdict.status_id = 5;
         }
         Err(e) => {
-            verdict.output = e.to_string();
+            verdict.stderr = e.to_string();
             verdict.status_id = 7;
             verdict.status = "Runtime Error".into();
         }
