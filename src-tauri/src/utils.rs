@@ -31,6 +31,10 @@ pub fn resolve_path(dir: &Path, path: &str) -> PathBuf {
 }
 
 pub fn extract_code_block(source: &str) -> String {
+    if !source.contains("@code") {
+        return source.into()
+    }
+
     let mut lines = source.lines();
     // Find the start marker
     while let Some(line) = lines.next() {

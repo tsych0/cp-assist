@@ -3,12 +3,12 @@ use handlebars_misc_helpers::register;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use std::collections::{BTreeMap, VecDeque};
+use std::collections::{BTreeMap, VecDeque, HashMap, HashSet};
 use std::fs;
 use std::io::Write;
 use std::path::PathBuf;
 use std::sync::Mutex;
-use std::{collections::HashMap, path::Path};
+use std::{path::Path};
 use tauri::State;
 
 use crate::utils::{extract_code_block, ResultTrait};
@@ -82,6 +82,12 @@ mod {{@key}} {
     }
 }
 
+#[derive(Serialize)]
+struct TemplateData {
+    code: String,
+    lib_files: Vec<(String, String)>,
+}
+
 impl Config {
     pub fn get_filename(&self, problem: &Problem) -> Result<String, String> {
         let mut bars = Handlebars::new();
@@ -134,76 +140,139 @@ impl Config {
 
     pub fn get_template(&self, dir: &Path) -> String {
         let template_path = resolve_path(dir, &self.code.template);
-        match fs::read_to_string(template_path) {
-            Ok(content) => content,
-            Err(e) => {
-                eprintln!("Error reading template file: {}", e);
-                String::new()
-            }
-        }
+        fs::read_to_string(template_path).unwrap_or_else(|e| {
+            eprintln!("Error reading template file: {}", e);
+            String::new()
+        })
     }
 
     pub fn get_final_code(&self, problem: &Problem, dir: &Path) -> Result<String, String> {
         // Read source code
         let source_code = fs::read_to_string(self.get_file_path(problem, dir)?).map_to_string()?;
-        let source_code = extract_code_block(&source_code);
 
         // Get included files content
         let mut included_files = self.get_included_files(dir)?;
-        // let re = regex
 
         let mut deque = VecDeque::new();
         let mut visited = HashMap::new();
+        let mut graph: HashMap<String, HashSet<String>> = HashMap::new();
 
         let mut bars = Handlebars::new();
         register(&mut bars);
         bars.register_template_string("libcheck", &self.code.lib_check_regex)
             .map_to_string()?;
 
-        // First see what files are required in the source code
+        // Determine initial dependencies from source_code
         for (k, _) in &included_files {
             let re = Regex::new(
                 &bars
                     .render("libcheck", &json!({"name": k}))
                     .map_to_string()?,
             )
-            .map_to_string_mess("Invalid regex for lib_check")?;
-            println!("regex: {}", re.as_str());
+                .map_to_string_mess("Invalid regex for lib_check")?;
             if re.is_match(&source_code) {
                 deque.push_back(k.clone());
             }
         }
+        
+        println!("inital libraries: {deque:?}");
 
-        // Then dfs to see what are the dependencies
+        // Traverse and build dependency graph
         while let Some(d) = deque.pop_front() {
             if visited.contains_key(&d) {
                 continue;
             }
             let v = included_files.remove(&d).unwrap();
-            visited.insert(d.clone(), v.clone());
+            let mut deps = HashSet::new();
+
+            // Search for nested dependencies
             for (k, _) in &included_files {
                 let re = Regex::new(
                     &bars
                         .render("libcheck", &json!({"name": k}))
                         .map_to_string()?,
                 )
-                .map_to_string_mess("Invalid regex for lib_check")?;
+                    .map_to_string_mess("Invalid regex for lib_check")?;
                 if re.is_match(&v) {
+                    deps.insert(k.clone());
                     deque.push_back(k.clone());
                 }
             }
+
+            graph.insert(d.clone(), deps);
+            visited.insert(d.clone(), extract_code_block(&v));
         }
+
+
+        let sorted_libs = topo_sort(&graph)?;
+
+        print!("sorted_libs = {sorted_libs:?}");
+
+        // Build the sorted lib_files map
+        let lib_files = sorted_libs
+            .into_iter()
+            .rev()
+            .filter_map(|k| visited.get(&k).map(|v| (k, v.clone())))
+            .collect::<Vec<_>>(); // or regular BTreeMap/HashMap if order not needed beyond template
+
+        let source_code = extract_code_block(&source_code);
 
         bars.register_template_string("modify", &self.code.modifier)
             .map_to_string()?;
 
         // Prepare context for the template
-        let data = json!({
-            "code": source_code,
-            "lib_files": visited
-        });
+        let data = TemplateData {
+            code: source_code,
+            lib_files,
+        };
 
-        Ok(bars.render("modify", &data).map_to_string()?)
+        let res = bars.render("modify", &data).map_to_string()?;
+
+        print!("{res}");
+
+        Ok(res)
+    }
+}
+
+fn topo_sort(graph: &HashMap<String, HashSet<String>>) -> Result<Vec<String>, String> {
+    let mut in_degree = HashMap::new();
+    let mut order = Vec::new();
+    let mut queue = VecDeque::new();
+
+    // Initialize in-degrees
+    for (node, deps) in graph {
+        in_degree.entry(node.clone()).or_insert(0);
+        for dep in deps {
+            *in_degree.entry(dep.clone()).or_insert(0) += 1;
+        }
+    }
+
+    // Start with zero in-degree nodes
+    for (node, &deg) in &in_degree {
+        if deg == 0 {
+            queue.push_back(node.clone());
+        }
+    }
+
+    while let Some(node) = queue.pop_front() {
+        order.push(node.clone());
+
+        if let Some(deps) = graph.get(&node) {
+            for dep in deps {
+                if let Some(deg) = in_degree.get_mut(dep) {
+                    *deg -= 1;
+                    if *deg == 0 {
+                        queue.push_back(dep.clone());
+                    }
+                }
+            }
+        }
+    }
+
+    if order.len() == graph.len() {
+        Ok(order)
+    } else {
+        Err("Cycle detected in dependency graph".into())
     }
 }
 
