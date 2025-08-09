@@ -151,7 +151,7 @@ impl Config {
         let source_code = fs::read_to_string(self.get_file_path(problem, dir)?).map_to_string()?;
 
         // Get included files content
-        let mut included_files = self.get_included_files(dir)?;
+        let included_files = self.get_included_files(dir)?;
 
         let mut deque = VecDeque::new();
         let mut visited = HashMap::new();
@@ -174,7 +174,7 @@ impl Config {
                 deque.push_back(k.clone());
             }
         }
-        
+
         println!("inital libraries: {deque:?}");
 
         // Traverse and build dependency graph
@@ -182,31 +182,41 @@ impl Config {
             if visited.contains_key(&d) {
                 continue;
             }
-            let v = included_files.remove(&d).unwrap();
+
+            let v = included_files.get(&d).unwrap(); // 👈 just borrow, don't remove yet
             let mut deps = HashSet::new();
 
             // Search for nested dependencies
             for (k, _) in &included_files {
+                if k == &d {
+                    continue; // avoid self-dep or reprocessing
+                }
+
                 let re = Regex::new(
                     &bars
                         .render("libcheck", &json!({"name": k}))
                         .map_to_string()?,
                 )
                     .map_to_string_mess("Invalid regex for lib_check")?;
-                if re.is_match(&v) {
+
+                if re.is_match(v) {
                     deps.insert(k.clone());
-                    deque.push_back(k.clone());
+                    if !deque.contains(k) {
+                        deque.push_back(k.clone()); // 👈 avoid pushing duplicates
+                    }
                 }
             }
 
             graph.insert(d.clone(), deps);
-            visited.insert(d.clone(), extract_code_block(&v));
+            visited.insert(d.clone(), extract_code_block(v));
         }
+
+        println!("Graph: {graph:?}");
 
 
         let sorted_libs = topo_sort(&graph)?;
 
-        print!("sorted_libs = {sorted_libs:?}");
+        println!("sorted_libs = {sorted_libs:?}");
 
         // Build the sorted lib_files map
         let lib_files = sorted_libs
