@@ -119,6 +119,14 @@ export const create_file = async () =>
     "Could not create file",
   )) ?? false;
 
+export const copy_code = async () =>
+    (await invokeWithNotify<boolean>(
+        "copy_code",
+        {},
+        "Code copied",
+        "Could not copy code",
+    )) ?? false;
+
 export const save_state = async () =>
   (await invokeWithNotify<boolean>(
     "save_state",

@@ -16,4 +16,5 @@ input {
 
 body {
   user-select: none;
+  background: transparent !important;
 }

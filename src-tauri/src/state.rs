@@ -19,6 +19,7 @@ use wait_timeout::ChildExt;
 // Windows-specific imports
 #[cfg(windows)]
 use std::os::windows::process::CommandExt;
+use arboard::Clipboard;
 
 #[cfg(windows)]
 const CREATE_NO_WINDOW: u32 = 0x08000000; // Prevents opening a new window
@@ -91,10 +92,10 @@ pub async fn set_problem(
     state: State<'_, Mutex<AppState>>,
 ) -> Result<(), String> {
     state.lock().unwrap().problem = problem;
-    if state.lock().unwrap().config.toggle.create_file {
-        return create_file(state).await;
-    }
-    Ok(())
+    // if state.lock().unwrap().config.toggle.create_file {
+    create_file(state).await
+    // }
+    // Ok(())
 }
 
 #[tauri::command]
@@ -128,6 +129,16 @@ pub fn save_state(
 }
 
 #[tauri::command]
+pub async fn copy_code(app_state: State<'_, Mutex<AppState>>) -> Result<(), String> {
+    let state = app_state.lock().unwrap();
+    let problem = state.problem.clone();
+    let code = state.config.get_final_code(&problem, &state.directory)?;
+    let mut clipboard = Clipboard::new().map_to_string()?;
+    clipboard.set_text(code).map_to_string()?;
+    Ok(())
+}
+
+#[tauri::command]
 pub async fn create_file(app_state: State<'_, Mutex<AppState>>) -> Result<(), String> {
     let state = app_state.lock().unwrap().clone();
     let config = &state.config;
@@ -157,8 +168,7 @@ pub async fn create_file(app_state: State<'_, Mutex<AppState>>) -> Result<(), St
         let mut watcher = watcher.write().unwrap();
         watcher
             .watch(&file_path, RecursiveMode::NonRecursive)
-            .map_to_string()
-            .unwrap();
+            .map_to_string()?;
     }
 
     let mut cmd = Command::new(config.editor.clone())

@@ -1,13 +1,14 @@
 import {Box, Flex, Image, Space, Stack, Text} from "@mantine/core";
 import {open} from '@tauri-apps/plugin-dialog';
 import React, {useEffect} from "react";
-import {getCurrentWindow, LogicalSize} from "@tauri-apps/api/window"
+import {Effect, getCurrentWindow, LogicalSize} from "@tauri-apps/api/window"
 import {set_directory} from "./commands.tsx";
 const appWindow = getCurrentWindow()
 
 const LandingPage = ({setDirectory}: { setDirectory: React.Dispatch<React.SetStateAction<string>> }) => {
     useEffect(() => {
         appWindow.setSize(new LogicalSize(600, 450)).then(null);
+        appWindow.setEffects({effects: [Effect.Blur], radius: 10})
     }, [])
 
     const chooseFolder = async () => {

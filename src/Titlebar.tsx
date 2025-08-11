@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import {
   create_file,
+  copy_code,
   get_language,
   get_languages,
   read_config,
@@ -77,7 +78,11 @@ const TitleBar = ({
     <Flex
       h={40}
       data-tauri-drag-region
-      style={{ backgroundColor: isFocused ? "#2b2d30" : "#3c3f41" }}
+      style={{
+        backgroundColor: isFocused ? "#2b2d30" : "#3c3f41",
+        borderTopLeftRadius: "15px",
+        borderTopRightRadius: "15px",
+    }}
     >
       {directory !== "" && (
         <>
@@ -149,41 +154,43 @@ const TitleBar = ({
       {directory !== "" && (
         <>
           <Center
-            h={34}
-            w={34}
-            my={"auto"}
-            mx={2}
-            title={"Create File"}
-            className="rounded-md hover:bg-[#484b4d] cursor-pointer z-10"
-            onClick={() => create_file()}
+              h={34}
+              w={34}
+              my={"auto"}
+              mx={2}
+              title={"Copy Code"}
+              className="rounded-md hover:bg-[#484b4d] cursor-pointer z-10"
+              onClick={() => copy_code()}
           >
-            <Image src="create_file.svg" h={24} fit="contain" />
+            <Image src="copy.svg" h={24} fit="contain" />
           </Center>
 
+
           <Select
-            h={35}
-            my={"auto"}
-            w={160}
-            variant="light"
-            c={"white"}
-            defaultValue={"0"}
-            data={trimmedLanguages}
-            value={language}
-            className={"bg-black/15 rounded-md z-10"}
-            onChange={onChangeLanguage}
-            allowDeselect={false}
-            comboboxProps={{ width: 250 }}
-            renderOption={({ option, checked }) => (
-              <Group>
-                <Text fz={18} fw={"500"} className={"tracking-wider"}>
-                  {languageFromId(option.value)}
-                </Text>{" "}
-                {checked && (
-                  <IconCheck style={{ marginInlineStart: "auto" }} />
-                )}{" "}
-              </Group>
-            )}
+              h={35}
+              my={"auto"}
+              w={160}
+              variant="light"
+              c={"white"}
+              defaultValue={"0"}
+              data={trimmedLanguages}
+              value={language}
+              className={"bg-black/15 rounded-md z-10"}
+              onChange={onChangeLanguage}
+              allowDeselect={false}
+              comboboxProps={{ width: 250 }}
+              renderOption={({ option, checked }) => (
+                  <Group>
+                    <Text fz={18} fw={"500"} className={"tracking-wider"}>
+                      {languageFromId(option.value)}
+                    </Text>{" "}
+                    {checked && (
+                        <IconCheck style={{ marginInlineStart: "auto" }} />
+                    )}{" "}
+                  </Group>
+              )}
           />
+
         </>
       )}
 
@@ -203,6 +210,7 @@ const TitleBar = ({
           h={40}
           w={36}
           className="hover:bg-[#e81123]"
+          style={{borderTopRightRadius: "15px"}}
           onClick={() => appWindow.close()}
         >
           <Image src="close.svg" h={22} fit="contain" />

@@ -1,19 +1,10 @@
-import {
-  Box,
-  Center,
-  Flex,
-  Group,
-  Select,
-  Stack,
-  Text,
-  Textarea,
-} from "@mantine/core";
-import { useEffect, useState } from "react";
-import { LogicalSize } from "@tauri-apps/api/window";
-import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
-import { Problem, Verdict } from "./Languages.ts";
-import { IconPlus } from "@tabler/icons-react";
-import { emit } from "@tauri-apps/api/event";
+import {Box, Center, Flex, Group, Select, Stack, Text, Textarea,} from "@mantine/core";
+import {useEffect, useState} from "react";
+import {Effect, LogicalSize} from "@tauri-apps/api/window";
+import {getCurrentWebviewWindow} from "@tauri-apps/api/webviewWindow";
+import {Problem, Verdict} from "./Languages.ts";
+import {IconPlus} from "@tabler/icons-react";
+import {emit} from "@tauri-apps/api/event";
 
 const appWindow = getCurrentWebviewWindow();
 
@@ -124,6 +115,7 @@ const Home = ({
     setError(verdicts[caseIndex]?.stderr ?? "");
     setAnswer(verdicts[caseIndex]?.answer ?? "");
     appWindow.setSize(new LogicalSize(1000, 650)).then(null);
+    appWindow.setEffects({effects: [Effect.Blur]}).then(null);
   }, [verdicts]);
 
   return problem?.title ? (

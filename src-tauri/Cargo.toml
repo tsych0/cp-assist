@@ -34,6 +34,7 @@ handlebars = { version = "6.3.2", features = [
 ] }
 handlebars_misc_helpers = "0.17.0"
 regex = { version = "1.11.1", features = ["use_std"] }
+arboard = "3.6.0"
 
 [dependencies.uuid]
 version = "1.17.0"

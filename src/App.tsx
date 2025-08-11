@@ -46,8 +46,9 @@ function App() {
 
   return (
     <Box
-      className="bg-[#1e1f22] border border-[#3c3f41]"
-      style={{ height: "100%", width: "100%", position: "fixed" }}
+      className="bg-[#1e1f22]/[80%] border border-[#3c3f41]"
+      style={{ height: "100%", width: "100%", position: "fixed",
+      borderRadius: "15px"}}
     >
       <TitleBar setDirectory={setDirectory} directory={directory} loading={loading} setLoading={setLoading} />
       {directory === "" && <LandingPage setDirectory={setDirectory} />}

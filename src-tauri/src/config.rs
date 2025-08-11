@@ -25,7 +25,7 @@ pub struct Config {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ToggleSettings {
-    pub create_file: bool,
+    // pub create_file: bool,
     pub run_on_save: bool,
     pub submit_on_ac: bool,
 }
@@ -74,7 +74,7 @@ mod {{@key}} {
             include: HashMap::new(),
             editor: "code".into(),
             toggle: ToggleSettings {
-                create_file: true,
+                // create_file: true,
                 run_on_save: true,
                 submit_on_ac: false,
             },
@@ -211,11 +211,13 @@ impl Config {
             visited.insert(d.clone(), extract_code_block(v));
         }
 
+        #[cfg(debug_assertions)]
         println!("Graph: {graph:?}");
 
 
         let sorted_libs = topo_sort(&graph)?;
 
+        #[cfg(debug_assertions)]
         println!("sorted_libs = {sorted_libs:?}");
 
         // Build the sorted lib_files map
@@ -238,6 +240,7 @@ impl Config {
 
         let res = bars.render("modify", &data).map_to_string()?;
 
+        #[cfg(debug_assertions)]
         print!("{res}");
 
         Ok(res)

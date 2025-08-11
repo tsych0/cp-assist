@@ -95,6 +95,7 @@ pub fn run() {
             set_verdicts,
             get_verdicts,
             create_file,
+            copy_code,
             read_config,
             save_state,
             submit_solution,
