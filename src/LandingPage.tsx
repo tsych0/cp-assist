@@ -8,7 +8,7 @@ const appWindow = getCurrentWindow()
 const LandingPage = ({setDirectory}: { setDirectory: React.Dispatch<React.SetStateAction<string>> }) => {
     useEffect(() => {
         appWindow.setSize(new LogicalSize(600, 450)).then(null);
-        appWindow.setEffects({effects: [Effect.Blur], radius: 10})
+        appWindow.setEffects({effects: [Effect.Blur], radius: 10}).then(null);
     }, [])
 
     const chooseFolder = async () => {
